@@ -154,6 +154,30 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
   private void tearDown() {
     synchronized (tearDownLock) {
       Log.d(TAG, "teardown");
+      if (activityBinding != null) {
+        ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_SCAN : Manifest.permission.ACCESS_FINE_LOCATION, (grantedScan, permissionScan) -> {
+          if (grantedScan) {
+            ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_CONNECT : null, (grantedConnect, permissionConnect) -> {
+              if (grantedConnect) {
+                List<BluetoothDevice> devices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
+                if (devices.size()>0) {
+                  String deviceId = devices.get(0).getAddress();
+                  BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceId);
+                  BluetoothDeviceCache cache = mDevices.remove(deviceId);
+                  if(cache != null) {
+                    BluetoothGatt gattServer = cache.gatt;
+                    gattServer.disconnect();
+                    int state = mBluetoothManager.getConnectionState(device, BluetoothProfile.GATT);
+                    if(state == BluetoothProfile.STATE_DISCONNECTED) {
+                      gattServer.close();
+                    }
+                  }
+                }
+              }
+            });
+          }
+        });
+      }
       context = null;
       channel.setMethodCallHandler(null);
       channel = null;
