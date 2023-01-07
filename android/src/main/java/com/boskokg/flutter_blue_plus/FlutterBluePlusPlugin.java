@@ -107,7 +107,6 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
     Log.d(TAG, "onDetachedFromEngine");
     pluginBinding = null;
-    tearDown();
   }
 
   @Override
@@ -132,6 +131,7 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
   @Override
   public void onDetachedFromActivity() {
     Log.d(TAG, "onDetachedFromActivity");
+    tearDown();
     activityBinding.removeRequestPermissionsResultListener(this);
     activityBinding = null;
   }

@@ -618,10 +618,13 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
   }
   // Manufacturer Specific Data
   NSData *manufData = advertisementData[CBAdvertisementDataManufacturerDataKey];
-  if(manufData != nil && manufData.length > 2) {
+  if(manufData != nil && manufData.length > 7) {
     unsigned short manufacturerId;
     [manufData getBytes:&manufacturerId length:2];
-    [[ads manufacturerData] setObject:[manufData subdataWithRange:NSMakeRange(2, manufData.length - 2)] forKey:manufacturerId];
+    if ()
+    [[ads manufacturerData] setObject:[manufData subdataWithRange:NSMakeRange(2, 6)] forKey:manufacturerId];
+  } else {
+    return null;
   }
   // Service Data
   NSDictionary *serviceData = advertisementData[CBAdvertisementDataServiceDataKey];
