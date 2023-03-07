@@ -76,6 +76,8 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
   private BluetoothManager mBluetoothManager;
   private BluetoothAdapter mBluetoothAdapter;
 
+  //nordic
+
   private FlutterPluginBinding pluginBinding;
   private ActivityPluginBinding activityBinding;
 
@@ -319,7 +321,7 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
             p.addDevices(ProtoMaker.from(d));
           }
           result.success(p.build().toByteArray());
-          log(LogLevel.EMERGENCY, "mDevices size: " + mDevices.size());
+          log(LogLevel.EMERGENCY, "getcnt mDevices size: " + mDevices.size());
         });
         break;
       }
@@ -332,7 +334,7 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
           p.addDevices(ProtoMaker.from(d));
         }
         result.success(p.build().toByteArray());
-        log(LogLevel.EMERGENCY, "mDevices size: " + mDevices.size());
+        log(LogLevel.EMERGENCY, "bond mDevices size: " + mDevices.size());
         break;
       }
 
@@ -349,38 +351,47 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
           try {
             options = Protos.ConnectRequest.newBuilder().mergeFrom(data).build();
           } catch (InvalidProtocolBufferException e) {
+            Log.d("clearGattCache", "CLEAR GATT CACHE: options" );
             result.error("RuntimeException", e.getMessage(), e);
             return;
           }
           String deviceId = options.getRemoteId();
           BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceId);
+
+
           boolean isConnected = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT).contains(device);
 
           // If device is already connected, return error
           if(mDevices.containsKey(deviceId) && isConnected) {
+            Log.d("clearGattCache", "CLEAR GATT CACHE: return" );
             result.error("already_connected", "connection with device already exists", null);
             return;
           }
-
+          boolean hasCleared = false;
           // If device was connected to previously but is now disconnected, attempt a reconnect
           BluetoothDeviceCache bluetoothDeviceCache = mDevices.get(deviceId);
-          if(bluetoothDeviceCache != null && !isConnected) {
-            if(bluetoothDeviceCache.gatt.connect()){
-              result.success(null);
-            } else {
-              result.error("reconnect_error", "error when reconnecting to device", null);
-            }
-            return;
-          }
 
-          // New request, connect and add gattServer to Map
+          if (bluetoothDeviceCache != null) {
+            BluetoothGatt gattServer = bluetoothDeviceCache.gatt;
+            try {
+              final Method refresh = gattServer.getClass().getMethod("refresh");
+              if (refresh != null){
+                hasCleared = (Boolean) refresh.invoke(gattServer);
+              }
+            }catch (Exception e){
+              Log.d("clearGattCache", e.toString());
+            }
+            Log.d("clearGattCache", "CLEAR GATT CACHE: " + hasCleared);
+          }
           BluetoothGatt gattServer;
+          Log.d("clearGattCache", "CLEAR GATT CACHE: start" );
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             gattServer = device.connectGatt(context, options.getAndroidAutoConnect(), mGattCallback, BluetoothDevice.TRANSPORT_LE);
           } else {
             gattServer = device.connectGatt(context, options.getAndroidAutoConnect(), mGattCallback);
           }
           mDevices.put(deviceId, new BluetoothDeviceCache(gattServer));
+          Log.d("clearGattCache", "CLEAR GATT CACHE: ok" );
           result.success(null);
         });
         break;
@@ -390,8 +401,7 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
       {
         String deviceId = (String)call.arguments;
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceId);
-        device.createBond();
-        result.success(null);
+        result.success( device.createBond());
         break;
       }
 
